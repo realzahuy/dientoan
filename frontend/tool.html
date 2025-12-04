@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Công cụ Encrypt/Decrypt - AES-256</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="gradient-bg">
+    <div style="max-width: 1200px; width: 100%; padding: 20px;">
+      <div class="text-center mb-3">
+        <h1 style="color: white; margin-bottom: 10px;">🔐 Công cụ Encrypt/Decrypt nhanh</h1>
+        <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">Mã hóa và giải mã file ngay lập tức, không cần đăng nhập</p>
+        <a href="index.html" class="link" style="color: white;">← Quay lại trang chủ</a>
+      </div>
+      
+      <div class="tool-container">
+        <!-- Encrypt Card -->
+        <div class="tool-card">
+          <h2>🔒 Mã hóa File</h2>
+          
+          <div id="encryptMessage"></div>
+          
+          <form id="encryptForm">
+            <div class="form-group">
+              <label for="encryptFile">Chọn file</label>
+              <input type="file" id="encryptFile" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="encryptPassword">Mật khẩu mã hóa</label>
+              <input type="password" id="encryptPassword" class="form-control" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Mã hóa và tải xuống</button>
+          </form>
+        </div>
+        
+        <!-- Decrypt Card -->
+        <div class="tool-card">
+          <h2>🔓 Giải mã File</h2>
+          
+          <div id="decryptMessage"></div>
+          
+          <form id="decryptForm">
+            <div class="form-group">
+              <label for="decryptFile">Chọn file .enc</label>
+              <input type="file" id="decryptFile" class="form-control" accept=".enc" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="decryptPassword">Mật khẩu giải mã</label>
+              <input type="password" id="decryptPassword" class="form-control" required>
+            </div>
+            
+            <button type="submit" class="btn btn-secondary btn-block">Giải mã và tải xuống</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Encrypt Form
+    const encryptForm = document.getElementById('encryptForm');
+    const encryptMessage = document.getElementById('encryptMessage');
+    
+    encryptForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('encryptFile');
+      const password = document.getElementById('encryptPassword').value;
+      
+      if (!fileInput.files[0]) {
+        encryptMessage.innerHTML = '<div class="alert alert-error">Vui lòng chọn file</div>';
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('password', password);
+      
+      try {
+        encryptMessage.innerHTML = '<div class="alert alert-success">Đang mã hóa...</div>';
+        
+        const response = await fetch('/tool/encrypt', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileInput.files[0].name + '.enc';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          encryptMessage.innerHTML = '<div class="alert alert-success">Mã hóa thành công! File đã được tải xuống.</div>';
+          encryptForm.reset();
+        } else {
+          const data = await response.json();
+          encryptMessage.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        encryptMessage.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+    
+    // Decrypt Form
+    const decryptForm = document.getElementById('decryptForm');
+    const decryptMessage = document.getElementById('decryptMessage');
+    
+    decryptForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('decryptFile');
+      const password = document.getElementById('decryptPassword').value;
+      
+      if (!fileInput.files[0]) {
+        decryptMessage.innerHTML = '<div class="alert alert-error">Vui lòng chọn file</div>';
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('password', password);
+      
+      try {
+        decryptMessage.innerHTML = '<div class="alert alert-success">Đang giải mã...</div>';
+        
+        const response = await fetch('/tool/decrypt', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          
+          // Lấy tên file từ header hoặc bỏ .enc
+          let filename = fileInput.files[0].name;
+          if (filename.endsWith('.enc')) {
+            filename = filename.slice(0, -4);
+          }
+          a.download = filename;
+          
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          decryptMessage.innerHTML = '<div class="alert alert-success">Giải mã thành công! File đã được tải xuống.</div>';
+          decryptForm.reset();
+        } else {
+          const data = await response.json();
+          decryptMessage.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        decryptMessage.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+  </script>
+</body>
+</html>

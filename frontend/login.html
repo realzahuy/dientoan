@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập - AES-256 File Encryption</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="gradient-bg">
+    <div class="card">
+      <h2>Đăng nhập</h2>
+      
+      <div id="message"></div>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Mật khẩu</label>
+          <input type="password" id="password" class="form-control" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+      </form>
+      
+      <div class="text-center mt-3">
+        <a href="register.html" class="link">Chưa có tài khoản? Đăng ký ngay</a>
+      </div>
+      
+      <div class="text-center mt-3">
+        <a href="index.html" class="link">← Quay lại trang chủ</a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const form = document.getElementById('loginForm');
+    const messageDiv = document.getElementById('message');
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="alert alert-success">Đăng nhập thành công! Đang chuyển hướng...</div>';
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1000);
+        } else {
+          messageDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+  </script>
+</body>
+</html>

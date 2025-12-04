@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - AES-256 File Encryption</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-logo">🔐 AES-256</div>
+      
+      <ul class="sidebar-menu">
+        <li><button class="menu-btn active" data-section="files">📁 My Files</button></li>
+        <li><button class="menu-btn" data-section="upload">📤 Encrypt & Upload</button></li>
+        <li><button class="menu-btn" data-section="tool">🔧 Tool Encrypt/Decrypt</button></li>
+        <li><button id="logoutBtn">🚪 Đăng xuất</button></li>
+      </ul>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Topbar -->
+      <div class="topbar">
+        <div class="user-info">
+          Xin chào, <span class="user-email" id="userEmail">...</span>
+        </div>
+      </div>
+      
+      <!-- Section 1: My Files -->
+      <div id="filesSection" class="section active">
+        <div class="dashboard-header">
+          <h1>My Files</h1>
+          <p>Quản lý file đã mã hóa của bạn</p>
+        </div>
+        
+        <!-- Files List Card -->
+        <div class="dashboard-card">
+          <h2>📋 Danh sách file của bạn</h2>
+          
+          <div class="table-container">
+            <table id="filesTable">
+              <thead>
+                <tr>
+                  <th>Tên file</th>
+                  <th>Dung lượng</th>
+                  <th>Ngày upload</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="filesTableBody">
+                <tr>
+                  <td colspan="4" style="text-align: center; color: #6b7280;">Đang tải...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Section 2: Encrypt & Upload -->
+      <div id="uploadSection" class="section">
+        <div class="dashboard-header">
+          <h1>Encrypt & Upload</h1>
+          <p>Mã hóa và lưu trữ file của bạn</p>
+        </div>
+        
+        <!-- Upload Card -->
+        <div class="dashboard-card">
+          <h2>📤 Upload & Encrypt File</h2>
+          
+          <div id="uploadMessage"></div>
+          
+          <form id="uploadForm">
+            <div class="form-group">
+              <label for="uploadFile">Chọn file</label>
+              <input type="file" id="uploadFile" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="encryptionPassword">Mật khẩu mã hóa</label>
+              <input type="password" id="encryptionPassword" class="form-control" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Upload và mã hóa</button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Section 3: Tool Encrypt/Decrypt -->
+      <div id="toolSection" class="section">
+        <div class="dashboard-header">
+          <h1>Tool Encrypt/Decrypt</h1>
+          <p>Mã hóa và giải mã file nhanh chóng</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+          <!-- Encrypt Card -->
+          <div class="dashboard-card">
+            <h2>🔒 Mã hóa File</h2>
+            
+            <div id="toolEncryptMessage"></div>
+            
+            <form id="toolEncryptForm">
+              <div class="form-group">
+                <label for="toolEncryptFile">Chọn file</label>
+                <input type="file" id="toolEncryptFile" class="form-control" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="toolEncryptPassword">Mật khẩu mã hóa</label>
+                <input type="password" id="toolEncryptPassword" class="form-control" required>
+              </div>
+              
+              <button type="submit" class="btn btn-primary btn-block">Mã hóa và tải xuống</button>
+            </form>
+          </div>
+          
+          <!-- Decrypt Card -->
+          <div class="dashboard-card">
+            <h2>🔓 Giải mã File</h2>
+            
+            <div id="toolDecryptMessage"></div>
+            
+            <form id="toolDecryptForm">
+              <div class="form-group">
+                <label for="toolDecryptFile">Chọn file .enc</label>
+                <input type="file" id="toolDecryptFile" class="form-control" accept=".enc" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="toolDecryptPassword">Mật khẩu giải mã</label>
+                <input type="password" id="toolDecryptPassword" class="form-control" required>
+              </div>
+              
+              <button type="submit" class="btn btn-secondary btn-block">Giải mã và tải xuống</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Download Modal -->
+  <div id="downloadModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Nhập mật khẩu giải mã</h3>
+      </div>
+      
+      <div id="downloadModalMessage"></div>
+      
+      <form id="downloadForm">
+        <div class="form-group">
+          <label for="downloadPassword">Mật khẩu mã hóa file</label>
+          <input type="password" id="downloadPassword" class="form-control" required>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeDownloadModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary">Tải xuống</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Delete Modal -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Xác nhận xóa file</h3>
+      </div>
+      
+      <div id="deleteModalMessage"></div>
+      
+      <p style="margin-bottom: 20px; color: #6b7280;">Nhập mật khẩu tài khoản để xác nhận xóa file</p>
+      
+      <form id="deleteForm">
+        <div class="form-group">
+          <label for="accountPassword">Mật khẩu tài khoản</label>
+          <input type="password" id="accountPassword" class="form-control" required>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Hủy</button>
+          <button type="submit" class="btn btn-danger">Xóa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    let currentFileId = null;
+    
+    // Load user info
+    async function loadUserInfo() {
+      try {
+        const response = await fetch('/api/me');
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            window.location.href = 'login.html';
+            return;
+          }
+          throw new Error('Failed to load user info');
+        }
+        const user = await response.json();
+        document.getElementById('userEmail').textContent = user.email;
+      } catch (error) {
+        console.error('Load user info error:', error);
+      }
+    }
+    
+    // Section Toggle
+    document.querySelectorAll('.menu-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const section = btn.dataset.section;
+        
+        // Update active menu
+        document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Show section
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(section + 'Section').classList.add('active');
+      });
+    });
+    
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = 'index.html';
+      } catch (error) {
+        alert('Lỗi khi đăng xuất');
+      }
+    });
+    
+    // Load files
+    async function loadFiles() {
+      try {
+        const response = await fetch('/api/files');
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            window.location.href = 'login.html';
+            return;
+          }
+          throw new Error('Failed to load files');
+        }
+        
+        const files = await response.json();
+        const tbody = document.getElementById('filesTableBody');
+        
+        if (files.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #6b7280;">Chưa có file nào</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = files.map(file => `
+          <tr>
+            <td>${escapeHtml(file.original_name)}</td>
+            <td>${formatBytes(file.size)}</td>
+            <td>${formatDate(file.created_at)}</td>
+            <td>
+              <button class="btn btn-primary btn-sm" onclick="openDownloadModal(${file.id})">Tải xuống</button>
+              <button class="btn btn-danger btn-sm" onclick="openDeleteModal(${file.id})">Xóa</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Load files error:', error);
+      }
+    }
+    
+    // Upload Form
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('uploadFile');
+      const encryptionPassword = document.getElementById('encryptionPassword').value;
+      const messageDiv = document.getElementById('uploadMessage');
+      
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('encryptionPassword', encryptionPassword);
+      
+      try {
+        messageDiv.innerHTML = '<div class="alert alert-success">Đang upload và mã hóa...</div>';
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="alert alert-success">Upload thành công!</div>';
+          document.getElementById('uploadForm').reset();
+          loadFiles();
+          
+          // Tự động ẩn alert sau 3 giây
+          setTimeout(() => {
+            messageDiv.innerHTML = '';
+          }, 3000);
+        } else {
+          messageDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+    
+    // Download Modal
+    function openDownloadModal(fileId) {
+      currentFileId = fileId;
+      document.getElementById('downloadModal').classList.add('show');
+      document.getElementById('downloadPassword').value = '';
+      document.getElementById('downloadModalMessage').innerHTML = '';
+    }
+    
+    function closeDownloadModal() {
+      document.getElementById('downloadModal').classList.remove('show');
+      currentFileId = null;
+    }
+    
+    document.getElementById('downloadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const password = document.getElementById('downloadPassword').value;
+      const messageDiv = document.getElementById('downloadModalMessage');
+      
+      try {
+        messageDiv.innerHTML = '<div class="alert alert-success">Đang giải mã...</div>';
+        
+        const response = await fetch(`/api/download/${currentFileId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          
+          // Get filename from header
+          const disposition = response.headers.get('Content-Disposition');
+          let filename = 'download';
+          if (disposition) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+            if (matches && matches[1]) {
+              filename = decodeURIComponent(matches[1].replace(/['"]/g, ''));
+            }
+          }
+          a.download = filename;
+          
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          closeDownloadModal();
+        } else {
+          const data = await response.json();
+          messageDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+    
+    // Delete Modal
+    function openDeleteModal(fileId) {
+      currentFileId = fileId;
+      document.getElementById('deleteModal').classList.add('show');
+      document.getElementById('accountPassword').value = '';
+      document.getElementById('deleteModalMessage').innerHTML = '';
+    }
+    
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('show');
+      currentFileId = null;
+    }
+    
+    document.getElementById('deleteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const accountPassword = document.getElementById('accountPassword').value;
+      const messageDiv = document.getElementById('deleteModalMessage');
+      
+      try {
+        const response = await fetch(`/api/delete/${currentFileId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountPassword })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          closeDeleteModal();
+          loadFiles();
+        } else {
+          messageDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+    
+    // Tool Encrypt Form (trong dashboard)
+    document.getElementById('toolEncryptForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('toolEncryptFile');
+      const password = document.getElementById('toolEncryptPassword').value;
+      const messageDiv = document.getElementById('toolEncryptMessage');
+      
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('password', password);
+      
+      try {
+        messageDiv.innerHTML = '<div class="alert alert-success">Đang mã hóa...</div>';
+        
+        const response = await fetch('/tool/encrypt', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileInput.files[0].name + '.enc';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          messageDiv.innerHTML = '<div class="alert alert-success">Mã hóa thành công!</div>';
+          document.getElementById('toolEncryptForm').reset();
+        } else {
+          const data = await response.json();
+          messageDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+    
+    // Tool Decrypt Form (trong dashboard)
+    document.getElementById('toolDecryptForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('toolDecryptFile');
+      const password = document.getElementById('toolDecryptPassword').value;
+      const messageDiv = document.getElementById('toolDecryptMessage');
+      
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('password', password);
+      
+      try {
+        messageDiv.innerHTML = '<div class="alert alert-success">Đang giải mã...</div>';
+        
+        const response = await fetch('/tool/decrypt', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          
+          let filename = fileInput.files[0].name;
+          if (filename.endsWith('.enc')) {
+            filename = filename.slice(0, -4);
+          }
+          a.download = filename;
+          
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          messageDiv.innerHTML = '<div class="alert alert-success">Giải mã thành công!</div>';
+          document.getElementById('toolDecryptForm').reset();
+        } else {
+          const data = await response.json();
+          messageDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+    
+    // Utility functions
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN');
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Load user info and files on page load
+    loadUserInfo();
+    loadFiles();
+  </script>
+</body>
+</html>

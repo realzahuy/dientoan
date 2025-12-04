@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng ký - AES-256 File Encryption</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="gradient-bg">
+    <div class="card">
+      <h2>Đăng ký tài khoản</h2>
+      
+      <div id="message"></div>
+      
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Mật khẩu</label>
+          <input type="password" id="password" class="form-control" required>
+          <small style="color: #6b7280; font-size: 0.875rem;">Tối thiểu 8 ký tự, có chữ hoa, chữ thường và số</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmPassword">Xác nhận mật khẩu</label>
+          <input type="password" id="confirmPassword" class="form-control" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Đăng ký</button>
+      </form>
+      
+      <div class="text-center mt-3">
+        <a href="login.html" class="link">Đã có tài khoản? Đăng nhập</a>
+      </div>
+      
+      <div class="text-center mt-3">
+        <a href="index.html" class="link">← Quay lại trang chủ</a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const form = document.getElementById('registerForm');
+    const messageDiv = document.getElementById('message');
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, confirmPassword })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          messageDiv.innerHTML = '<div class="alert alert-success">Đăng ký thành công! Đang chuyển đến trang đăng nhập...</div>';
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 1500);
+        } else {
+          messageDiv.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Lỗi kết nối server</div>';
+      }
+    });
+  </script>
+</body>
+</html>

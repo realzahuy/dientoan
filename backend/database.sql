@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS files (
   user_id INT NOT NULL,
   original_name VARCHAR(255) NOT NULL,
   stored_name VARCHAR(255) NOT NULL,
+  cloudinary_url TEXT,
   size BIGINT NOT NULL,
   salt BLOB NOT NULL,
   iv BLOB NOT NULL,

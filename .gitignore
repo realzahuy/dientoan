@@ -1,5 +1,4 @@
 backend/node_modules/
-backend/uploads/
 backend/.env
 *.log
 .DS_Store

@@ -85,9 +85,27 @@ Hoặc import file SQL:
 mysql -u root -p < backend/database.sql
 ```
 
-### 3. Cấu hình file .env
+### 3. Cấu hình Cloudinary
 
-Chỉnh sửa file `backend/.env` với thông tin MySQL của bạn:
+#### Bước 3.1: Tạo tài khoản Cloudinary
+
+1. Truy cập: https://cloudinary.com/
+2. Đăng ký tài khoản miễn phí
+3. Xác nhận email
+
+#### Bước 3.2: Lấy thông tin API
+
+1. Đăng nhập vào Cloudinary Dashboard
+2. Vào mục **Dashboard** (trang chủ sau khi đăng nhập)
+3. Tìm phần **Account Details** hoặc **API Keys**
+4. Sao chép các thông tin sau:
+   - **Cloud Name**
+   - **API Key**
+   - **API Secret**
+
+### 4. Cấu hình file .env
+
+Chỉnh sửa file `backend/.env` với thông tin của bạn:
 
 ```env
 PORT=5000
@@ -97,12 +115,18 @@ DB_USER=your_mysql_user
 DB_PASSWORD=your_mysql_password
 DB_NAME=file_encryption_db
 JWT_SECRET=your_jwt_secret_change_this_to_random_string
-UPLOAD_DIR=uploads
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
-**Lưu ý**: Thay đổi `JWT_SECRET` thành một chuỗi ngẫu nhiên dài để bảo mật.
+**Lưu ý**: 
+- Thay đổi `JWT_SECRET` thành một chuỗi ngẫu nhiên dài để bảo mật
+- Điền đầy đủ thông tin Cloudinary để upload file lên cloud
 
-### 4. Chạy server
+### 5. Chạy server
 
 ```bash
 cd backend
@@ -116,6 +140,22 @@ start.bat
 ```
 
 Server sẽ chạy tại: http://localhost:5000
+
+## Thay đổi quan trọng: Upload lên Cloudinary
+
+**Phiên bản mới này upload file trực tiếp lên Cloudinary thay vì lưu local:**
+
+- ✅ File được mã hóa AES-256-GCM trước khi upload
+- ✅ Upload lên Cloudinary cloud storage
+- ✅ Không cần folder `uploads/` trên server
+- ✅ Trả về URL từ Cloudinary
+- ✅ Download file từ Cloudinary khi cần
+
+**Lợi ích:**
+- Tiết kiệm dung lượng server
+- Dễ dàng scale và deploy
+- Backup tự động trên cloud
+- Truy cập nhanh từ CDN
 
 ## Hướng dẫn sử dụng
 
@@ -161,12 +201,186 @@ Server sẽ chạy tại: http://localhost:5000
 - `POST /api/download/:id` - Download và giải mã file
 - `POST /api/delete/:id` - Xóa file
 
+## Test API với curl
+
+### Upload file:
+```bash
+# Đăng nhập
+curl -X POST http://localhost:5000/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test1234"}' \
+  -c cookies.txt
+
+# Upload file
+curl -X POST http://localhost:5000/api/upload \
+  -F "file=@/path/to/file.txt" \
+  -F "encryptionPassword=mypass123" \
+  -b cookies.txt
+```
+
+### Response mẫu:
+```json
+{
+  "success": true,
+  "message": "Upload và mã hóa thành công",
+  "data": {
+    "public_id": "encrypted_files/1_abc123",
+    "url": "https://res.cloudinary.com/.../encrypted_files/1_abc123",
+    "original_filename": "file.txt"
+  }
+}
+```
+
+## Cloudinary Integration
+
+### Tại sao dùng Cloudinary?
+
+Thay vì lưu file mã hóa trong folder `uploads/` trên server, project này upload trực tiếp lên Cloudinary cloud storage:
+
+**Lợi ích:**
+- ✅ Không tốn dung lượng disk server
+- ✅ Dễ dàng scale khi có nhiều user
+- ✅ Backup tự động trên cloud
+- ✅ CDN delivery nhanh toàn cầu
+- ✅ Sẵn sàng cho production deploy
+
+**Bảo mật:**
+- File được mã hóa AES-256-GCM **trước** khi upload
+- Cloudinary chỉ lưu file đã mã hóa (binary)
+- Không ai đọc được nội dung file trên Cloudinary
+- Cần mật khẩu giải mã để download
+
+### Cách hoạt động
+
+1. **Upload**: File → Mã hóa AES-256-GCM → Upload lên Cloudinary → Lưu URL vào DB
+2. **Download**: Lấy URL từ DB → Tải file từ Cloudinary → Giải mã → Trả về user
+3. **Delete**: Xóa file trên Cloudinary + Xóa record trong DB
+
+### Troubleshooting
+
+#### Lỗi: "Thiếu thông tin cấu hình Cloudinary"
+
+**Nguyên nhân:** Chưa set biến môi trường trong `.env`
+
+**Giải pháp:**
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+#### Lỗi: "Upload failed"
+
+**Nguyên nhân:** Sai API credentials hoặc hết quota
+
+**Giải pháp:**
+- Kiểm tra lại credentials trên Cloudinary Dashboard
+- Kiểm tra quota (Free tier: 25 credits/month)
+- Kiểm tra kết nối internet
+
+#### Lỗi: "Download failed"
+
+**Nguyên nhân:** URL không hợp lệ hoặc file đã bị xóa
+
+**Giải pháp:**
+- Kiểm tra `cloudinary_url` trong database
+- Kiểm tra file còn tồn tại trên Cloudinary Dashboard
+
+### Migration từ phiên bản cũ
+
+Nếu bạn đang có project cũ dùng folder `uploads/`:
+
+#### Bước 1: Backup dữ liệu
+```bash
+cp -r backend/uploads backend/uploads_backup
+mysqldump -u root -p file_encryption_db > backup.sql
+```
+
+#### Bước 2: Cập nhật database
+```sql
+ALTER TABLE files ADD COLUMN cloudinary_url TEXT AFTER stored_name;
+```
+
+#### Bước 3: Cài đặt dependencies mới
+```bash
+cd backend
+npm install
+```
+
+#### Bước 4: Cấu hình Cloudinary trong .env
+
+#### Bước 5: (Optional) Migrate file cũ lên Cloudinary
+
+Tạo file `migrate-to-cloudinary.js`:
+
+```javascript
+require('dotenv').config();
+const cloudinary = require('./config/cloudinary');
+const mysql = require('mysql2/promise');
+const fs = require('fs').promises;
+const path = require('path');
+
+async function migrate() {
+  const db = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+  });
+
+  const [files] = await db.query('SELECT * FROM files WHERE cloudinary_url IS NULL');
+  
+  for (const file of files) {
+    try {
+      const filePath = path.join('uploads', file.stored_name);
+      const fileBuffer = await fs.readFile(filePath);
+      
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'raw',
+            folder: 'encrypted_files',
+            public_id: file.stored_name.replace('.enc', '')
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(fileBuffer);
+      });
+      
+      await db.query(
+        'UPDATE files SET cloudinary_url = ? WHERE id = ?',
+        [result.secure_url, file.id]
+      );
+      
+      console.log(`✓ Migrated: ${file.original_name}`);
+    } catch (error) {
+      console.error(`✗ Failed: ${file.original_name}`, error.message);
+    }
+  }
+  
+  await db.end();
+  console.log('Migration complete!');
+}
+
+migrate();
+```
+
+Chạy migration:
+```bash
+node migrate-to-cloudinary.js
+```
+
 ## Lưu ý
 
-- File mã hóa được lưu trong thư mục `backend/uploads/`
-- Để deploy production, nên chuyển sang AWS S3 hoặc cloud storage khác
+- File được mã hóa AES-256-GCM trước khi upload lên Cloudinary
+- Cloudinary lưu file dạng raw (binary) trong folder `encrypted_files/`
+- Không cần folder `backend/uploads/` nữa
 - Đảm bảo backup database thường xuyên
-- Thay đổi JWT_SECRET trước khi deploy
+- Thay đổi JWT_SECRET và Cloudinary credentials trước khi deploy
+- Free tier Cloudinary: 25 credits/month (đủ cho development)
 
 ## License
 

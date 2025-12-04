@@ -6,19 +6,12 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const crypto = require('crypto');
-const fs = require('fs').promises;
-const fsSync = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const cloudinary = require('./config/cloudinary');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads';
-
-// Tạo thư mục uploads nếu chưa tồn tại
-if (!fsSync.existsSync(UPLOAD_DIR)) {
-  fsSync.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
 
 // Middleware
 app.use(express.json());
@@ -214,21 +207,47 @@ app.post('/api/upload', authenticateToken, upload.single('file'), async (req, re
     // Mã hóa file
     const { encrypted, salt, iv, authTag } = encryptFile(req.file.buffer, encryptionPassword);
     
-    // Lưu file mã hóa
-    const storedName = `${uuidv4()}.enc`;
-    const filePath = path.join(UPLOAD_DIR, storedName);
-    await fs.writeFile(filePath, encrypted);
+    // Upload file mã hóa lên Cloudinary
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'raw',
+          folder: 'encrypted_files',
+          public_id: `${req.user.userId}_${uuidv4()}`,
+          use_filename: false
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      
+      // Ghi buffer vào stream
+      uploadStream.end(encrypted);
+    });
     
-    // Lưu metadata vào DB
+    // Lưu metadata vào DB (lưu public_id và secure_url từ Cloudinary)
     await db.query(
-      'INSERT INTO files (user_id, original_name, stored_name, size, salt, iv, auth_tag) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [req.user.userId, req.file.originalname, storedName, req.file.size, salt, iv, authTag]
+      'INSERT INTO files (user_id, original_name, stored_name, cloudinary_url, size, salt, iv, auth_tag) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [req.user.userId, req.file.originalname, uploadResult.public_id, uploadResult.secure_url, req.file.size, salt, iv, authTag]
     );
     
-    res.json({ message: 'Upload và mã hóa thành công' });
+    res.json({ 
+      success: true,
+      message: 'Upload và mã hóa thành công',
+      data: {
+        public_id: uploadResult.public_id,
+        url: uploadResult.secure_url,
+        original_filename: req.file.originalname
+      }
+    });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: 'Lỗi khi upload file' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Lỗi khi upload file',
+      message: error.message 
+    });
   }
 });
 
@@ -268,9 +287,10 @@ app.post('/api/download/:id', authenticateToken, async (req, res) => {
     
     const file = files[0];
     
-    // Đọc file mã hóa
-    const filePath = path.join(UPLOAD_DIR, file.stored_name);
-    const encrypted = await fs.readFile(filePath);
+    // Tải file mã hóa từ Cloudinary
+    const axios = require('axios');
+    const response = await axios.get(file.cloudinary_url, { responseType: 'arraybuffer' });
+    const encrypted = Buffer.from(response.data);
     
     // Giải mã
     try {
@@ -320,21 +340,26 @@ app.post('/api/delete/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'File không tồn tại' });
     }
     
-    // Xóa file vật lý
-    const filePath = path.join(UPLOAD_DIR, files[0].stored_name);
+    // Xóa file từ Cloudinary
     try {
-      await fs.unlink(filePath);
+      await cloudinary.uploader.destroy(files[0].stored_name, { resource_type: 'raw' });
     } catch (err) {
-      console.error('File delete error:', err);
+      console.error('Cloudinary delete error:', err);
     }
     
     // Xóa record trong DB
     await db.query('DELETE FROM files WHERE id = ?', [fileId]);
     
-    res.json({ message: 'Xóa file thành công' });
+    res.json({ 
+      success: true,
+      message: 'Xóa file thành công' 
+    });
   } catch (error) {
     console.error('Delete error:', error);
-    res.status(500).json({ error: 'Lỗi khi xóa file' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Lỗi khi xóa file' 
+    });
   }
 });
 

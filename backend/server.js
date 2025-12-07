@@ -12,6 +12,7 @@ const cloudinary = require('./config/cloudinary');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Middleware
 app.use(express.json());
@@ -484,8 +485,8 @@ app.post('/tool/decrypt', upload.single('file'), async (req, res) => {
 
 // Start server
 connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`✓ Server đang chạy tại http://localhost:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`✓ Server đang chạy tại http://${HOST}:${PORT}`);
   });
 }).catch(err => {
   console.error('Lỗi kết nối database:', err);

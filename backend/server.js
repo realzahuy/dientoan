@@ -43,11 +43,28 @@ async function connectDB() {
 
 // Middleware xác thực JWT
 function authenticateToken(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) return res.status(401).json({ error: 'Chưa đăng nhập' });
-
+  let token = null;
+  
+  // Ưu tiên 1: Đọc từ cookie (web browser)
+  if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+  // Ưu tiên 2: Đọc từ header Authorization (Postman, mobile app)
+  else if (req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    token = authHeader.startsWith('Bearer ') 
+      ? authHeader.split(' ')[1]  // "Bearer abc123" → "abc123"
+      : authHeader;                // "abc123" → "abc123"
+  }
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Chưa đăng nhập' });
+  }
+  
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token không hợp lệ' });
+    if (err) {
+      return res.status(403).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
+    }
     req.user = user;
     next();
   });
@@ -160,9 +177,19 @@ app.post('/api/login', async (req, res) => {
     // Tạo JWT
     const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
     
-    // Lưu trong HTTP-only cookie
-    res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
-    res.json({ message: 'Đăng nhập thành công' });
+    // Lưu trong HTTP-only cookie (cho web browser)
+    res.cookie('token', token, { 
+      httpOnly: true, 
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: 'strict',
+      path: '/'
+    });
+    
+    // Trả token trong response (cho Postman/mobile app)
+    res.json({ 
+      message: 'Đăng nhập thành công',
+      token: token  // ← Thêm token vào response
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Lỗi server' });

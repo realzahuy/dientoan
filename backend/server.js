@@ -182,7 +182,8 @@ app.post('/api/login', async (req, res) => {
     res.cookie('token', token, { 
       httpOnly: true, 
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: 'strict',
+      sameSite: 'lax',
+      domain: process.env.COOKIE_DOMAIN || undefined,
       path: '/'
     });
     
@@ -199,7 +200,10 @@ app.post('/api/login', async (req, res) => {
 
 // Đăng xuất
 app.post('/api/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', {
+    domain: process.env.COOKIE_DOMAIN || undefined,
+    path: '/'
+  });
   res.json({ message: 'Đã đăng xuất' });
 });
 
